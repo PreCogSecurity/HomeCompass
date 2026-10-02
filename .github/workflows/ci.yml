@@ -10,6 +10,12 @@ on:
 permissions:
   contents: read
 
+# Every action below is pinned to an immutable commit SHA, with the human
+# readable version kept in a trailing comment. A floating tag such as
+# `actions/checkout@v4` can be repointed by whoever controls that tag, which
+# turns a routine CI dependency into remote code execution inside this
+# repository; Dependabot (see .github/dependabot.yml) refreshes the SHAs.
+
 # A new push to the same ref supersedes the in-flight run.
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
@@ -18,17 +24,25 @@ concurrency:
 jobs:
   verify:
     name: Lint and test (Node ${{ matrix.node-version }})
-    runs-on: ubuntu-latest
+    # Pinned runner image. `ubuntu-latest` migrates to Ubuntu 26 on 2026-10-19,
+    # and an unannounced base-image flip is exactly the kind of fragility that
+    # breaks a release build the day before a ship.
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
     strategy:
       fail-fast: false
       matrix:
         node-version: ['20.19', '22.x', '24.x']
     steps:
       - name: Check out the repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # Nothing downstream needs the token, so do not leave a credential in
+          # `.git/config` for the rest of the job to pick up.
+          persist-credentials: false
 
       - name: Use Node ${{ matrix.node-version }}
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: ${{ matrix.node-version }}
           cache: npm
@@ -51,32 +65,38 @@ jobs:
 
   security:
     name: CodeQL static analysis
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
     # CodeQL needs to upload its SARIF results; nothing else is granted.
     permissions:
       contents: read
       security-events: write
     steps:
       - name: Check out the repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       # Independent SAST pass: catches tainted data reaching a sink in code the
       # hand-written linter does not model. JavaScript analysis needs no build.
       - name: Initialize CodeQL
-        uses: github/codeql-action/init@v3
+        uses: github/codeql-action/init@1190a975f95ce23525efb6a3fc21ea29567c1b52 # v3
         with:
           languages: javascript-typescript
           queries: security-and-quality
 
       - name: Analyze
-        uses: github/codeql-action/analyze@v3
+        uses: github/codeql-action/analyze@1190a975f95ce23525efb6a3fc21ea29567c1b52 # v3
 
   container:
     name: Container image builds
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
     steps:
       - name: Check out the repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - name: Build the image
         run: docker build --tag homecompass:ci .

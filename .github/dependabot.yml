@@ -21,3 +21,13 @@ updates:
     labels:
       - dependencies
       - ci
+
+  # The container base image is pinned by digest, so nothing but Dependabot can
+  # decide which Node build the shipped image is built from.
+  - package-ecosystem: docker
+    directory: /
+    schedule:
+      interval: weekly
+    labels:
+      - dependencies
+      - ci

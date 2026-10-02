@@ -112,9 +112,14 @@ a container build with a live health-check smoke test, and GitHub CodeQL static
 analysis (`security-and-quality` queries) as an independent SAST pass over
 JavaScript.
 
-Actions in CI are referenced by version tag rather than commit SHA. Pinning to
-SHAs is the stronger option and is tracked as follow-up work; Dependabot updates
-those tags.
+Every action in CI is referenced by an immutable commit SHA, with the version
+kept in a trailing comment, so a floating tag cannot be repointed into remote
+code execution inside this repository; Dependabot refreshes the pins. The
+container base image is pinned the same way, to the `node:24-alpine` manifest
+digest, which also makes a released image reproducible. The workflow checks out
+with `persist-credentials: false`, so the job token is not left behind in
+`.git/config` for a later step to pick up, and it runs with `contents: read`
+only — the CodeQL job adds `security-events: write`, and nothing else.
 
 ## Verifying a build
 

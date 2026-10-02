@@ -44,6 +44,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed a container build failure: the Dockerfile copied `scripts/`, which
   `.dockerignore` excludes from the build context. The linter is not runtime
   code and is no longer copied.
+- Fixed a second container build failure: the runtime stage copied
+  `/app/node_modules` out of a stage where `npm ci --omit=dev` installs nothing,
+  so the `COPY` had no source and the image never built. The install prefix is
+  now copied as a whole, which is correct for an empty dependency tree and a
+  populated one alike, and it keeps the lockfile inside the image so a shipped
+  artefact can be traced back to an exact dependency set.
+- CI actions are pinned to immutable commit SHAs (`actions/checkout` v7.0.1,
+  `actions/setup-node` v7.0.0, `github/codeql-action` v3) with the version in a
+  trailing comment. A floating tag can be repointed by whoever controls it,
+  which turns a routine CI dependency into code execution inside the
+  repository; Dependabot refreshes the pins. This also clears the Node.js 20
+  runner deprecation warning.
+- The container base image is pinned to the `node:24-alpine` manifest digest, so
+  the released image is reproducible and an upstream tag re-push cannot change
+  what customers run. Dependabot refreshes the digest weekly.
+- CI runs on a pinned `ubuntu-24.04` runner (the `ubuntu-latest` label migrates
+  to Ubuntu 26 on 2026-10-19), checks out with `persist-credentials: false`, and
+  bounds every job with `timeout-minutes` so a hung job cannot burn a runner.
+- The DNS-rebinding tests asserted that the rejected `Host` was absent with a
+  substring scan over the response body. That pattern is exactly what CodeQL's
+  *incomplete string comparison* query flags, and a substring scan also cannot
+  distinguish a value from one embedded in a larger host. The tests now compare
+  the whole error envelope and match header values exactly: stronger assertions,
+  and the alert's root cause is gone rather than suppressed.
 - Added `.gitattributes` pinning working trees to LF, so a Windows contributor
   with `core.autocrlf=true` does not fail `npm run lint` on a fresh checkout.
 - `LICENSE` carries the full MIT text rather than a two-line stub.

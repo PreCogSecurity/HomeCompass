@@ -1,7 +1,38 @@
 import assert from 'node:assert/strict';
 import test, { describe } from 'node:test';
+import { CONTENT_SECURITY_POLICY } from '../src/lib/headers.js';
 import { buildAllowedHosts, checkHost, LOOPBACK_HOSTS, parseHost } from '../src/lib/host.js';
 import { rawRequest, startTestServer } from './helpers/harness.mjs';
+
+/** A name an attacker controls, and therefore never a legitimate deployment host. */
+const ATTACKER_HOST = 'evil.example.com';
+
+/** A name the operator declared through `ALLOWED_HOSTS`. */
+const DECLARED_HOST = 'homecompass.example';
+
+/** The only error envelope a rejected `Host` is allowed to produce. */
+const REJECTION = {
+  code: 'misdirected_request',
+  message: 'Host header is not served by this instance',
+};
+
+/**
+ * Every response header value that equals `value` exactly.
+ *
+ * Exact equality is the only sound way to prove a value is absent from a
+ * response. A substring scan over a joined header string (or over the raw body)
+ * is weaker — it is the pattern that CodeQL's "incomplete string comparison"
+ * query flags in a security check, because `'x.example.com'.includes(...)` can
+ * never distinguish an equal value from one embedded in a larger host — and it
+ * answers the wrong question about header values.
+ *
+ * @param {{headers: Record<string, string|string[]|number|undefined>}} response
+ * @param {string} value
+ * @returns {(string|string[]|number)[]}
+ */
+function headerValues(response, value) {
+  return Object.values(response.headers).filter((header) => header === value);
+}
 
 describe('parseHost', () => {
   test('normalises names and strips the port', () => {
@@ -107,15 +138,20 @@ describe('DNS rebinding defence over HTTP', () => {
       // This is exactly what a rebinding attack looks like on the wire: a
       // loopback connection carrying an attacker-controlled Host.
       const attack = await rawRequest(harness.port, '/api/items', {
-        headers: { Host: 'evil.example.com' },
+        headers: { Host: ATTACKER_HOST },
       });
       assert.equal(attack.status, 421);
-      const body = JSON.parse(attack.body);
-      assert.equal(body.error.code, 'misdirected_request');
-      // The rejected value must not be reflected back.
-      assert.equal(attack.body.includes('evil.example.com'), false);
-      // And nothing was served.
-      assert.equal(attack.headers['content-security-policy'] !== undefined, true);
+      // Asserting the *whole* envelope is what proves nothing was reflected
+      // back: deep equality cannot be satisfied by a body that also carries the
+      // rejected value. It additionally pins the client-safe message, so a
+      // future change that starts interpolating the Host into it fails here.
+      assert.deepEqual(JSON.parse(attack.body), {
+        error: { ...REJECTION, requestId: attack.headers['x-request-id'] },
+      });
+      // The same guarantee for the response headers.
+      assert.deepEqual(headerValues(attack, ATTACKER_HOST), []);
+      // The refusal still carries the full hardening header set.
+      assert.equal(attack.headers['content-security-policy'], CONTENT_SECURITY_POLICY);
 
       // The same route over a legitimate Host still works.
       const ok = await rawRequest(harness.port, '/api/items');
@@ -128,25 +164,32 @@ describe('DNS rebinding defence over HTTP', () => {
   test('static assets are covered too, so the UI cannot be rebound either', async () => {
     const harness = await startTestServer();
     try {
-      const attack = await rawRequest(harness.port, '/', { headers: { Host: 'evil.example.com' } });
+      const attack = await rawRequest(harness.port, '/', { headers: { Host: ATTACKER_HOST } });
       assert.equal(attack.status, 421);
-      assert.equal(attack.body.includes('<!DOCTYPE'), false);
+      assert.equal(JSON.parse(attack.body).error.code, REJECTION.code);
+      // The answer is the JSON envelope, not the page: a JSON content type and
+      // the absence of an ETag mean no byte of the UI was served to the
+      // rebound document.
+      assert.equal(attack.headers['content-type'], 'application/json; charset=utf-8');
+      assert.equal(attack.headers.etag, undefined);
+      assert.deepEqual(headerValues(attack, ATTACKER_HOST), []);
     } finally {
       await harness.close();
     }
   });
 
   test('a configured hostname keeps the UI reachable', async () => {
-    const harness = await startTestServer({ ALLOWED_HOSTS: 'homecompass.example' });
+    const harness = await startTestServer({ ALLOWED_HOSTS: DECLARED_HOST });
     try {
       const allowed = await rawRequest(harness.port, '/api/health', {
-        headers: { Host: 'homecompass.example' },
+        headers: { Host: DECLARED_HOST },
       });
       assert.equal(allowed.status, 200);
       const denied = await rawRequest(harness.port, '/api/health', {
-        headers: { Host: 'evil.example.com' },
+        headers: { Host: ATTACKER_HOST },
       });
       assert.equal(denied.status, 421);
+      assert.deepEqual(JSON.parse(denied.body).error.code, REJECTION.code);
     } finally {
       await harness.close();
     }
@@ -155,7 +198,7 @@ describe('DNS rebinding defence over HTTP', () => {
   test('rejections are counted for operators to alert on', async () => {
     const harness = await startTestServer();
     try {
-      await rawRequest(harness.port, '/api/health', { headers: { Host: 'evil.example.com' } });
+      await rawRequest(harness.port, '/api/health', { headers: { Host: ATTACKER_HOST } });
       assert.equal(harness.app.metrics.snapshot().hostRejected, 1);
     } finally {
       await harness.close();
