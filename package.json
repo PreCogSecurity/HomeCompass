@@ -1,0 +1,36 @@
+{
+  "name": "homecompass",
+  "version": "0.1.0",
+  "private": true,
+  "description": "HomeCompass - a dependency-free web app for tracking household inventory, rooms and assets.",
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "node": ">=20.12.0"
+  },
+  "main": "src/index.js",
+  "files": [
+    "src",
+    "public"
+  ],
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js",
+    "lint": "node scripts/lint.mjs",
+    "lint:fix": "node scripts/lint.mjs --fix",
+    "test": "node --test",
+    "test:watch": "node --test --watch",
+    "check": "npm run lint && npm test",
+    "audit:ci": "npm audit --audit-level=high",
+    "docker:build": "docker build -t homecompass:local .",
+    "docker:run": "docker run --rm -p 127.0.0.1:8080:8080 homecompass:local"
+  },
+  "keywords": [
+    "inventory",
+    "home",
+    "security",
+    "zero-dependency"
+  ],
+  "dependencies": {},
+  "devDependencies": {}
+}

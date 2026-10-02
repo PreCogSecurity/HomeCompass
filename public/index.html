@@ -1,0 +1,201 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="referrer" content="no-referrer" />
+    <meta
+      name="description"
+      content="HomeCompass - track household inventory, rooms and asset values."
+    />
+    <title>HomeCompass</title>
+    <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="/assets/styles.css" />
+    <script type="module" src="/assets/app.mjs"></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+
+    <header class="app-header">
+      <div class="app-header__brand">
+        <img src="/assets/favicon.svg" alt="" width="32" height="32" aria-hidden="true" />
+        <h1>HomeCompass</h1>
+      </div>
+      <p class="app-header__tagline">Know what you own, and where it is.</p>
+    </header>
+
+    <main id="main" class="layout">
+      <section class="panel" aria-labelledby="add-heading">
+        <h2 id="add-heading">Add an item</h2>
+        <form id="item-form" class="form" novalidate>
+          <div class="form__field">
+            <label for="field-name">Name <span aria-hidden="true">*</span></label>
+            <input
+              id="field-name"
+              name="name"
+              type="text"
+              required
+              maxlength="120"
+              autocomplete="off"
+              spellcheck="false"
+            />
+          </div>
+
+          <div class="form__row">
+            <div class="form__field">
+              <label for="field-category">Category</label>
+              <input
+                id="field-category"
+                name="category"
+                type="text"
+                maxlength="64"
+                list="category-options"
+                autocomplete="off"
+              />
+            </div>
+            <div class="form__field">
+              <label for="field-room">Room</label>
+              <input
+                id="field-room"
+                name="room"
+                type="text"
+                maxlength="64"
+                list="room-options"
+                autocomplete="off"
+              />
+            </div>
+          </div>
+
+          <datalist id="category-options"></datalist>
+          <datalist id="room-options"></datalist>
+
+          <div class="form__row">
+            <div class="form__field">
+              <label for="field-quantity">Quantity</label>
+              <input
+                id="field-quantity"
+                name="quantity"
+                type="number"
+                min="1"
+                max="100000"
+                step="1"
+                value="1"
+              />
+            </div>
+            <div class="form__field">
+              <label for="field-value">Value</label>
+              <input
+                id="field-value"
+                name="value"
+                type="number"
+                min="0"
+                max="1000000000"
+                step="0.01"
+                placeholder="optional"
+              />
+            </div>
+          </div>
+
+          <div class="form__row">
+            <div class="form__field">
+              <label for="field-purchase-date">Purchase date</label>
+              <input id="field-purchase-date" name="purchaseDate" type="date" />
+            </div>
+            <div class="form__field">
+              <label for="field-tags">Tags</label>
+              <input
+                id="field-tags"
+                name="tags"
+                type="text"
+                maxlength="300"
+                placeholder="comma separated"
+                autocomplete="off"
+              />
+            </div>
+          </div>
+
+          <div class="form__field">
+            <label for="field-notes">Notes</label>
+            <textarea id="field-notes" name="notes" rows="3" maxlength="2000"></textarea>
+          </div>
+
+          <div class="form__actions">
+            <button type="submit" class="button button--primary">Add item</button>
+            <button type="reset" class="button">Clear</button>
+          </div>
+
+          <p id="form-status" class="status" role="status" aria-live="polite"></p>
+          <ul id="form-errors" class="error-list" aria-live="polite"></ul>
+        </form>
+      </section>
+
+      <section class="panel" aria-labelledby="inventory-heading">
+        <div class="panel__header">
+          <h2 id="inventory-heading">Inventory</h2>
+          <p id="summary" class="summary"></p>
+        </div>
+
+        <div class="filters">
+          <div class="form__field">
+            <label for="filter-query">Search</label>
+            <input
+              id="filter-query"
+              type="search"
+              maxlength="120"
+              placeholder="name, tag or note"
+              autocomplete="off"
+            />
+          </div>
+          <div class="form__field">
+            <label for="filter-room">Room</label>
+            <select id="filter-room"><option value="">All rooms</option></select>
+          </div>
+          <div class="form__field">
+            <label for="filter-category">Category</label>
+            <select id="filter-category"><option value="">All categories</option></select>
+          </div>
+        </div>
+
+        <p id="list-status" class="status" role="status" aria-live="polite"></p>
+
+        <div class="table-wrap">
+          <table class="table">
+            <caption class="visually-hidden">
+              Items currently recorded in your home inventory
+            </caption>
+            <thead>
+              <tr>
+                <th scope="col">Name</th>
+                <th scope="col">Category</th>
+                <th scope="col">Room</th>
+                <th scope="col" class="numeric">Qty</th>
+                <th scope="col" class="numeric">Value</th>
+                <th scope="col">Tags</th>
+                <th scope="col"><span class="visually-hidden">Actions</span></th>
+              </tr>
+            </thead>
+            <tbody id="item-rows"></tbody>
+          </table>
+        </div>
+
+        <p id="empty-state" class="empty-state" hidden>
+          Nothing here yet. Add your first item using the form.
+        </p>
+      </section>
+    </main>
+
+    <footer class="app-footer">
+      <p>
+        HomeCompass runs entirely on your own machine. See
+        <code>SECURITY.md</code> for the security model and how to report an issue.
+      </p>
+    </footer>
+
+    <noscript>
+      <p class="noscript">
+        HomeCompass needs JavaScript enabled in your browser to manage your inventory.
+      </p>
+    </noscript>
+  </body>
+</html>

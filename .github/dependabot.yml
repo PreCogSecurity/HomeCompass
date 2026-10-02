@@ -1,0 +1,33 @@
+version: 2
+
+updates:
+  # Keeps the pinned Node runtime and the zero-dependency tree honest.
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    labels:
+      - dependencies
+      - security
+    commit-message:
+      prefix: 'chore(deps)'
+
+  # The workflow itself is attack surface: it runs with repository privileges.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    labels:
+      - dependencies
+      - ci
+
+  # The container base image is pinned by digest, so nothing but Dependabot can
+  # decide which Node build the shipped image is built from.
+  - package-ecosystem: docker
+    directory: /
+    schedule:
+      interval: weekly
+    labels:
+      - dependencies
+      - ci

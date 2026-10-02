@@ -1,4 +1,30 @@
-*.log
-.env
+# Dependencies
+node_modules/
+npm-debug.log*
+
+# The inventory database. This is the customer's plaintext record of everything
+# they own; it must never reach a git remote. See SECURITY.md for backups.
+data/
 *.tmp
+*.tmp-*
+
+# Local configuration. `.env` holds the deployment's real settings; only the
+# documented `.env.example` is committed.
+.env
+.env.*
+!.env.example
+
+# Test and coverage output
+coverage/
+.nyc_output/
+*.lcov
+
+# Logs
+*.log
+
+# OS / editor cruft
 .DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
