@@ -1,0 +1,43 @@
+# Local development / self-hosting stack.
+#
+# Hardened by default: the published port is bound to loopback, the container
+# runs as the unprivileged `node` user with all capabilities dropped, the root
+# filesystem is read-only, and the inventory lives in a named volume.
+
+services:
+  homecompass:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: homecompass:local
+    # Bind to 127.0.0.1: do not expose your inventory to the local network.
+    ports:
+      - "127.0.0.1:8080:8080"
+    environment:
+      NODE_ENV: production
+      LOG_LEVEL: info
+      DATA_DIR: /app/data
+      # Only enable when a reverse proxy you control terminates TLS in front.
+      TRUST_PROXY: "false"
+      # Counters reveal how much the household owns, so they stay off in
+      # production unless you opt in. See README "Configuration".
+      # METRICS_ENABLED: "true"
+    volumes:
+      - homecompass-data:/app/data
+    read_only: true
+    tmpfs:
+      - /tmp:size=16m,mode=1777
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--output-document=-", "http://127.0.0.1:8080/api/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+
+volumes:
+  homecompass-data:

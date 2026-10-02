@@ -1,0 +1,10 @@
+# Normalise line endings in the repository, and keep LF in working trees.
+#
+# The linter rejects CRLF, so a Windows contributor with `core.autocrlf=true`
+# would otherwise see `npm run lint` fail on a clean checkout. Pinning the
+# working tree to LF keeps the check reproducible everywhere.
+* text=auto eol=lf
+
+*.png binary
+*.ico binary
+*.webp binary

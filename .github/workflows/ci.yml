@@ -1,0 +1,98 @@
+name: CI
+
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+  workflow_dispatch:
+
+# Least privilege: the workflow only ever needs to read the repository.
+permissions:
+  contents: read
+
+# A new push to the same ref supersedes the in-flight run.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: Lint and test (Node ${{ matrix.node-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: ['20.19', '22.x', '24.x']
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v4
+
+      - name: Use Node ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: npm
+
+      # `npm ci` (not `npm install`) so CI can never silently resolve a
+      # different dependency graph than the committed lockfile. `--ignore-scripts`
+      # denies every dependency's lifecycle hooks: a package must never be able
+      # to execute code during install just by being in the tree.
+      - name: Install dependencies from the lockfile
+        run: npm ci --ignore-scripts
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Test
+        run: npm test
+
+      - name: Dependency audit
+        run: npm audit --audit-level=high
+
+  security:
+    name: CodeQL static analysis
+    runs-on: ubuntu-latest
+    # CodeQL needs to upload its SARIF results; nothing else is granted.
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v4
+
+      # Independent SAST pass: catches tainted data reaching a sink in code the
+      # hand-written linter does not model. JavaScript analysis needs no build.
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: javascript-typescript
+          queries: security-and-quality
+
+      - name: Analyze
+        uses: github/codeql-action/analyze@v3
+
+  container:
+    name: Container image builds
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v4
+
+      - name: Build the image
+        run: docker build --tag homecompass:ci .
+
+      - name: Smoke test the container
+        run: |
+          docker run --detach --name homecompass-ci --publish 127.0.0.1:8080:8080 homecompass:ci
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent http://127.0.0.1:8080/api/health > /tmp/health.json; then
+              cat /tmp/health.json
+              docker rm --force homecompass-ci
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "container did not become healthy" >&2
+          docker logs homecompass-ci
+          docker rm --force homecompass-ci
+          exit 1

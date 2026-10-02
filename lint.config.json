@@ -1,0 +1,84 @@
+{
+  "include": [
+    "src/**/*.js",
+    "public/**/*.mjs",
+    "scripts/**/*.mjs",
+    "test/**/*.js",
+    "test/**/*.mjs"
+  ],
+  "ignore": [
+    "node_modules/**",
+    "data/**",
+    "coverage/**",
+    ".git/**"
+  ],
+  "maxLineLength": 120,
+  "allowTabs": false,
+  "allowCrlf": false,
+  "requireFinalNewline": true,
+  "rules": {
+    "no-var": {
+      "severity": "error",
+      "pattern": "(^|[^\\w.$])var\\s+[A-Za-z_$]",
+      "message": "use let/const instead of var"
+    },
+    "no-debugger": {
+      "severity": "error",
+      "pattern": "(^|[^\\w.$])debugger\\b",
+      "message": "debugger statement left in committed code"
+    },
+    "no-eval": {
+      "severity": "error",
+      "pattern": "(^|[^\\w.$])(eval|Function)\\s*\\(|set(Timeout|Interval)\\s*\\(\\s*[\"']",
+      "message": "dynamic code execution is forbidden; it defeats the CSP"
+    },
+    "no-inner-html": {
+      "severity": "error",
+      "scope": ["public/**"],
+      "pattern": "\\.(inner|outer)HTML\\b|insertAdjacentHTML|document\\.write",
+      "message": "render with textContent instead of parsing HTML"
+    },
+    "no-console": {
+      "severity": "error",
+      "scope": ["src/**", "public/**"],
+      "pattern": "\\bconsole\\.(log|debug|info|warn|error|trace)\\b",
+      "message": "use the structured logger instead of console"
+    },
+    "no-focused-tests": {
+      "severity": "error",
+      "scope": ["test/**"],
+      "pattern": "\\b(describe|test|it)\\.only\\b|\\bfdescribe\\b|\\bfit\\b",
+      "message": "focused test left in the suite"
+    },
+    "no-skipped-tests": {
+      "severity": "warning",
+      "scope": ["test/**"],
+      "pattern": "\\b(describe|test|it)\\.skip\\b|\\bxit\\b|\\bxdescribe\\b",
+      "message": "skipped test: make sure this skip is temporary"
+    },
+    "no-hardcoded-secrets": {
+      "severity": "error",
+      "scope": ["src/**", "public/**", "scripts/**"],
+      "pattern": "(AKIA[0-9A-Z]{16}|-----BEGIN[ A-Z]*PRIVATE KEY-----|gh[pousr]_[A-Za-z0-9]{20,}|xox[baprs]-[A-Za-z0-9-]{10,}|sk_live_[A-Za-z0-9]{10,})|\\b(pass(word|phrase)?|secret|api[-_]?key|access[-_]?token|auth[-_]?token)\\b\\s*[:=]\\s*[\"'][^\"'\\s]{8,}[\"']",
+      "message": "possible hardcoded credential; read it from the environment instead"
+    },
+    "no-insecure-randomness": {
+      "severity": "error",
+      "scope": ["src/**"],
+      "pattern": "Math\\.random\\s*\\(",
+      "message": "Math.random is not cryptographic; use node:crypto"
+    },
+    "no-disable-certificate-validation": {
+      "severity": "error",
+      "scope": ["src/**"],
+      "pattern": "rejectUnauthorized\\s*:\\s*false|NODE_TLS_REJECT_UNAUTHORIZED",
+      "message": "TLS verification must not be disabled"
+    },
+    "no-child-process-shell": {
+      "severity": "error",
+      "scope": ["src/**"],
+      "pattern": "(?<![.\\w$])(exec|execSync|spawnSync)\\s*\\(|spawnSync\\s*\\([^)]*shell\\s*:\\s*true",
+      "message": "avoid shelling out with interpolated input"
+    }
+  }
+}

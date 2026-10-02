@@ -1,0 +1,25 @@
+# Keep the build context minimal: fewer files copied in, fewer secrets at risk.
+.git
+.github
+.gitignore
+.env
+.env.*
+!.env.example
+
+node_modules
+data
+coverage
+
+test
+scripts
+*.log
+*.tmp
+*.tmp-*
+
+CONTRIBUTING.md
+CHANGELOG.md
+SECURITY.md
+lint.config.json
+Dockerfile
+docker-compose.yml
+.dockerignore
